@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Automation System</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Document Automation System</h1>
+            <p class="subtitle">Upload passport and G-28 documents to automatically populate Form A-28</p>
+        </header>
+
+        <main>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="upload-section">
+                    <div class="file-upload drop-zone" id="passportDropZone">
+                        <label for="passportFile" class="file-label">
+                            <span class="label-text">Passport Document</span>
+                            <span class="file-info">Drag & Drop or Click to Upload</span>
+                            <span class="file-sub-info">PDF, JPEG, or PNG</span>
+                        </label>
+                        <input type="file" id="passportFile" name="passport_file" accept=".pdf,.jpg,.jpeg,.png"
+                            required>
+                        <div class="file-name" id="passportFileName"></div>
+                    </div>
+
+                    <div class="file-upload drop-zone" id="g28DropZone">
+                        <label for="g28File" class="file-label">
+                            <span class="label-text">G-28 Form</span>
+                            <span class="file-info">Drag & Drop or Click to Upload</span>
+                            <span class="file-sub-info">PDF, JPEG, or PNG</span>
+                        </label>
+                        <input type="file" id="g28File" name="g28_file" accept=".pdf,.jpg,.jpeg,.png" required>
+                        <div class="file-name" id="g28FileName"></div>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="submit-btn">
+                    Process Documents
+                </button>
+            </form>
+
+            <div id="statusArea" class="status-area hidden">
+                <h2>Status</h2>
+                <div id="statusMessage" class="status-message"></div>
+                <div id="statusDetails" class="status-details"></div>
+            </div>
+
+            <div id="errorArea" class="error-area hidden">
+                <h2>Error</h2>
+                <div id="errorMessage" class="error-message"></div>
+                <div id="errorDetails" class="error-details"></div>
+                <div id="errorSuggestion" class="error-suggestion"></div>
+            </div>
+
+            <div id="successArea" class="success-area hidden">
+                <h2>Success</h2>
+                <div id="successMessage" class="success-message"></div>
+                <div id="successDetails" class="success-details"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const passportFile = document.getElementById('passportFile');
+        const g28File = document.getElementById('g28File');
+        const passportFileName = document.getElementById('passportFileName');
+        const g28FileName = document.getElementById('g28FileName');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusArea = document.getElementById('statusArea');
+        const statusMessage = document.getElementById('statusMessage');
+        const statusDetails = document.getElementById('statusDetails');
+        const errorArea = document.getElementById('errorArea');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorDetails = document.getElementById('errorDetails');
+        const errorSuggestion = document.getElementById('errorSuggestion');
+        const successArea = document.getElementById('successArea');
+        const successMessage = document.getElementById('successMessage');
+        const successDetails = document.getElementById('successDetails');
+
+        // Drag and Drop Logic
+        ['passport', 'g28'].forEach(type => {
+            const dropZone = document.getElementById(`${type}DropZone`);
+            const fileInput = document.getElementById(`${type}File`);
+            const fileNameDisplay = document.getElementById(`${type}FileName`);
+
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // Highlight drop zone when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            // Handle dropped files
+            dropZone.addEventListener('drop', handleDrop, false);
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight(e) {
+                dropZone.classList.add('drag-active');
+            }
+
+            function unhighlight(e) {
+                dropZone.classList.remove('drag-active');
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    updateFileName(files[0].name);
+                }
+            }
+
+            function updateFileName(name) {
+                fileNameDisplay.textContent = name;
+            }
+
+            // Also update when standard file input is used
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    updateFileName(e.target.files[0].name);
+                } else {
+                    updateFileName('');
+                }
+            });
+        });
+
+        // Hide all result areas
+        function hideAllAreas() {
+            statusArea.classList.add('hidden');
+            errorArea.classList.add('hidden');
+            successArea.classList.add('hidden');
+        }
+
+        // Show status
+        function showStatus(message, details = '') {
+            hideAllAreas();
+            statusMessage.textContent = message;
+            statusDetails.textContent = details;
+            statusArea.classList.remove('hidden');
+        }
+
+        // Show error
+        function showError(error) {
+            hideAllAreas();
+            errorMessage.textContent = error.message || 'An error occurred';
+            errorDetails.textContent = error.details || '';
+            errorSuggestion.textContent = error.suggestion || '';
+            errorArea.classList.remove('hidden');
+        }
+
+        // Show success
+        function showSuccess(message, details) {
+            hideAllAreas();
+            successMessage.textContent = message;
+
+            let detailsHtml = '';
+            if (details) {
+                detailsHtml = '<ul>';
+                if (details.fields_filled !== undefined) {
+                    detailsHtml += `<li>Fields filled: ${details.fields_filled}</li>`;
+                }
+                if (details.fields_failed !== undefined && details.fields_failed > 0) {
+                    detailsHtml += `<li>Fields failed: ${details.fields_failed}</li>`;
+                }
+                if (details.filled_fields && details.filled_fields.length > 0) {
+                    detailsHtml += `<li>Filled fields: ${details.filled_fields.join(', ')}</li>`;
+                }
+                detailsHtml += '</ul>';
+
+                if (details.pdf_url) {
+                    detailsHtml += `
+                        <div style="margin-top: 15px;">
+                            <a href="${details.pdf_url}" download="Form A-28 Filled.pdf" class="submit-btn" style="display: inline-block; text-decoration: none; text-align: center; background-color: #28a745;">
+                                Download Filled Form (PDF)
+                            </a>
+                        </div>
+                    `;
+                }
+
+                if (details.screenshot_url) {
+                    detailsHtml += `
+                        <div class="result-image">
+                            <h3>Form Screenshot</h3>
+                            <a href="${details.screenshot_url}" target="_blank">
+                                <img src="${details.screenshot_url}" alt="Filled Form Screenshot" style="max-width: 100%; border: 1px solid #ccc; margin-top: 10px;">
+                            </a>
+                        </div>
+                    `;
+                }
+            }
+            successDetails.innerHTML = detailsHtml;
+            successArea.classList.remove('hidden');
+        }
+
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
+            // Show initial status
+            showStatus('Uploading files...', '');
+
+            const formData = new FormData();
+            formData.append('passport_file', passportFile.files[0]);
+            formData.append('g28_file', g28File.files[0]);
+
+            try {
+                showStatus('Processing documents...', 'Extracting data from passport and G-28 form...');
+
+                const response = await fetch('/api/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showSuccess(data.message, data.details);
+                } else {
+                    showError(data.error || {
+                        message: data.message || 'Processing failed',
+                        details: '',
+                        suggestion: ''
+                    });
+                }
+            } catch (error) {
+                showError({
+                    message: 'Network error',
+                    details: error.message,
+                    suggestion: 'Please check your connection and try again.'
+                });
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Process Documents';
+            }
+        });
+    </script>
+</body>
+
+</html>

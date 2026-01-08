@@ -1,0 +1,22 @@
+# Environment variables
+.env
+.venv
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE
+.vscode/
+.idea/
+
+# Application Data
+uploads/
+logs/
+*.log
+
+# Artifacts
+.gemini/
