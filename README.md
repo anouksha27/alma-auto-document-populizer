@@ -44,18 +44,10 @@ HEADLESS_MODE=False  # Set to False to see the browser type!
 ```bash
 uvicorn app:app --reload
 ```
-Open **http://localhost:8000** in your browser.
+Open **http://127.0.0.1:8000/** in your browser.
 
 ## Architecture
 - **Backend**: FastAPI (Python)
-- **AI/LLM**: Google Gemini 1.5 Flash via `google-generativeai`
+- **AI/LLM**: Google Gemini 3 Flash via `google-generativeai`
 - **Automation**: Playwright (Sync API)
 - **Frontend**: HTML5/CSS3 (No heavy framework required)
-
-## Usage for Demo
-1.  Set `HEADLESS_MODE=False` in `.env`.
-2.  Start the app and open the localhost URL.
-3.  Drag & drop a Passport and G-28 form.
-4.  Click **Process Documents**.
-5.  Watch the browser automatically open and fill the fields.
-6.  See the success message, screenshot, and download link.
